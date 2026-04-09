@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sam & Aurelie — Invitation de Mariage</title>
+    <title>Sam & Aurelie</title>
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -26,7 +26,8 @@
                             primary: '#964d30', // Terracotta
                             secondary: '#bc5a36', // Orange brûlé
                             text: '#3b2d2a', // Marron foncé
-                            contrast: '#8c7b6d' // Taupe
+                            contrast: '#8c7b6d', // Taupe
+                            bordeaux: '#801818'
                         }
                     },
                     fontFamily: {
@@ -35,17 +36,16 @@
                     },
                     animation: {
                         'rhythm': 'rhythm 3s infinite ease-in-out',
-                        'pulse-custom': 'pulse-custom 2s infinite'
+                        'envelope-float': 'envelope-float 3s infinite ease-in-out',
                     },
                     keyframes: {
                         rhythm: {
-                            '0%': { transform: 'scale(1) rotate(-2deg)' },
-                            '50%': { transform: 'scale(1.03) rotate(1deg)' },
-                            '100%': { transform: 'scale(1) rotate(-2deg)' },
+                            '0%, 100%': { transform: 'scale(1.02) rotate(0deg)' },
+                            '50%': { transform: 'scale(1.05) rotate(0.5deg)' },
                         },
-                        'pulse-custom': {
-                            '0%, 100%': { opacity: 1 },
-                            '50%': { opacity: 0.5 },
+                        'envelope-float': {
+                            '0%, 100%': { transform: 'translateY(0) rotate(0deg)' },
+                            '50%': { transform: 'translateY(-15px) rotate(1deg)' },
                         }
                     }
                 }
@@ -55,96 +55,155 @@
     
     <style>
         html { scroll-behavior: smooth; }
-        body { background-color: #f5f3f0; color: #3b2d2a; -webkit-font-smoothing: antialiased; }
+        body { background-color: #f5f3f0; color: #3b2d2a; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
         .font-serif { font-family: 'Playfair Display', serif; }
-        .bg-blur { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
-        input::placeholder { font-family: 'Playfair Display', serif; font-style: italic; opacity: 0.3; }
         
-        /* Carousel Transitions */
+        /* Enveloppe Style SVG */
+        .envelope-container { perspective: 1000px; width: 320px; height: 220px; cursor: pointer; position: relative; }
+        .envelope-svg { width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1); overflow: visible !important; }
+        
+        /* Ordre des couches SVG : Le clapet est dessous le papier lors de l'ouverture */
+        .flap { transform-origin: top; transition: transform 0.6s ease-in-out; }
+        .letter { transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.4s, opacity 0.4s ease-in-out 0.4s; opacity: 0; transform: translateY(0); }
+        
+        /* Animation d'ouverture */
+        .open .flap { transform: rotateX(180deg); }
+        .open .letter { transform: translateY(-160px); opacity: 1; }
+        
+        /* Filtre Terracotta Premium pour le Hero */
+        .terracotta-overlay {
+            position: absolute; inset: 0;
+            background-color: #964d30;
+            mix-blend-mode: soft-light;
+            opacity: 0.9;
+            z-index: 2;
+            pointer-events: none;
+        }
+        .terracotta-tint {
+            position: absolute; inset: 0;
+            background-color: #964d30;
+            mix-blend-mode: color;
+            opacity: 0.4;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .hero-bg-item { transition: opacity 2s ease-in-out; filter: sepia(0.3) contrast(1.1) brightness(0.8); }
         .carousel-item { transition: opacity 1s ease-in-out, transform 1s ease-in-out; }
     </style>
 </head>
 <body class="selection:bg-wedding-primary/20 selection:text-wedding-primary">
 
-    <!-- Écran de Bienvenue (Overlay) -->
-    <div id="welcome-screen" class="fixed inset-0 z-[100] bg-wedding-base flex flex-col items-center justify-center p-6 text-center">
-        <div class="max-w-md w-full">
-            <span class="text-wedding-primary uppercase tracking-[0.5em] text-[10px] mb-8 block font-bold">Invitation Officielle</span>
-            <h2 class="text-4xl md:text-6xl font-serif mb-4 leading-tight">Sam & Aurelie</h2>
-            <div class="h-px w-12 bg-wedding-primary/30 mx-auto my-8"></div>
-            <p class="text-wedding-contrast font-serif italic text-lg mb-12">Nous sommes heureux de partager ce moment avec vous.</p>
-            <button onclick="startExperience()" class="group relative px-12 py-5 bg-wedding-primary text-white overflow-hidden transition-all duration-500 hover:shadow-2xl hover:shadow-wedding-primary/30 uppercase tracking-[0.3em] text-[10px] font-bold flex items-center gap-3 mx-auto">
-                <span class="relative z-10 flex items-center gap-3">Consulter l'invitation <i data-lucide="music" class="w-4 h-4 animate-bounce"></i></span>
-                <div class="absolute inset-0 bg-wedding-secondary translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
-            </button>
+    <!-- Écran de Bienvenue -->
+    <div id="welcome-screen" class="fixed inset-0 z-[100] bg-wedding-base flex flex-col items-center justify-center p-6 text-center transition-opacity duration-1000">
+        <div class="envelope-container animate-envelope-float" onclick="openInvitation()">
+            <svg id="main-envelope" class="envelope-svg shadow-2xl" viewBox="0 0 400 280" style="overflow: visible;">
+                <defs>
+                    <linearGradient id="grad-flap" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:#9e2a2a;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#801818;stop-opacity:1" />
+                    </linearGradient>
+                    <linearGradient id="grad-body" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#801818;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#631212;stop-opacity:1" />
+                    </linearGradient>
+                    <filter id="shadow-soft" x="-20%" y="-20%" width="140%" height="140%">
+                        <feGaussianBlur in="SourceAlpha" stdDeviation="5"/>
+                        <feOffset dx="0" dy="5" result="offsetblur"/>
+                        <feComponentTransfer><feFuncA type="linear" slope="0.3"/></feComponentTransfer>
+                        <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                </defs>
+                
+                <!-- 1. Fond arrière de l'enveloppe -->
+                <path d="M10 270 L390 270 L390 10 L10 10 Z" fill="#631212" />
+                
+                <!-- 2. Le Clapet (Couvercle) -->
+                <g class="flap">
+                    <path d="M10 10 L390 10 L200 150 Z" fill="url(#grad-flap)" filter="url(#shadow-soft)" />
+                    <!-- Cœur central -->
+                    <g transform="translate(185, 65) scale(0.6)">
+                        <path d="M25 39.7 L21.4 36.4 C8.5 24.7 0 17 0 7.5 C0 3.3 3.3 0 7.5 0 C9.9 0 12.1 1.1 13.6 2.9 C15.1 1.1 17.3 0 19.7 0 C23.9 0 27.2 3.3 27.2 7.5 C27.2 17 18.7 24.7 5.8 36.4 L2.2 39.7 Z" 
+                              fill="none" stroke="white" stroke-width="2" opacity="0.8" transform="translate(10,0)"/>
+                    </g>
+                </g>
+
+                <!-- 3. Le Papier (La Lettre) - Devant le clapet -->
+                <g class="letter">
+                    <rect x="30" y="30" width="340" height="220" rx="4" fill="white" stroke="#f0f0f0" stroke-width="1" />
+                    <text x="200" y="110" font-family="Playfair Display, serif" font-style="italic" font-size="22" text-anchor="middle" fill="#964d30">Sam & Aurelie</text>
+                    <rect x="160" y="135" width="80" height="1" fill="#964d30" opacity="0.3" />
+                    <text x="200" y="160" font-family="Inter, sans-serif" font-weight="700" font-size="9" text-anchor="middle" fill="#8c7b6d" text-transform="uppercase" letter-spacing="2">Invitation Officielle</text>
+                    <text x="200" y="185" font-family="Inter, sans-serif" font-weight="400" font-size="8" text-anchor="middle" fill="#8c7b6d">28 AOÛT 2026</text>
+                </g>
+
+                <!-- 4. La Pochette de devant -->
+                <path d="M10 10 L10 270 L390 270 L390 10 L200 150 Z" fill="url(#grad-body)" />
+            </svg>
+        </div>
+        
+        <div id="welcome-hint" class="mt-12">
+            <p class="text-wedding-primary uppercase tracking-[0.4em] text-[10px] font-bold animate-pulse">Ouvrir l'enveloppe</p>
         </div>
     </div>
 
     <!-- Lecteur Audio -->
     <audio id="wedding-audio" src="./When God Made You __ NewSong and Natalie Grant (Lyrics).mp3" loop></audio>
 
-    <!-- Bouton Musique Flottant -->
-    <button id="music-btn" onclick="toggleMusic()" class="fixed bottom-8 right-8 z-[60] p-4 rounded-full shadow-2xl transition-all duration-500 flex items-center justify-center bg-white text-wedding-primary scale-100 hover:scale-110">
+    <!-- Bouton Musique -->
+    <button id="music-btn" onclick="toggleMusic()" class="fixed bottom-8 right-8 z-[60] p-4 rounded-full shadow-2xl transition-all duration-500 flex items-center justify-center bg-white text-wedding-primary">
         <i id="music-icon" data-lucide="volume-x" class="w-6 h-6"></i>
     </button>
 
-    <!-- Navigation -->
+    <!-- Nav -->
     <nav id="navbar" class="fixed top-0 w-full z-50 transition-all duration-500 px-6 py-4 flex justify-between items-center bg-transparent">
         <div class="flex flex-col">
             <span class="font-serif text-xl tracking-tighter">S & A</span>
             <span id="nav-table" class="text-[9px] uppercase tracking-widest text-wedding-primary font-bold hidden opacity-0 transition-opacity duration-700"></span>
         </div>
-        <a href="#rsvp" class="bg-wedding-primary text-white px-5 py-2 rounded-full text-[9px] uppercase tracking-widest hover:bg-wedding-secondary transition-all duration-300 shadow-md">
-            RSVP
-        </a>
+        <a href="#rsvp" class="bg-wedding-primary text-white px-5 py-2 rounded-full text-[9px] uppercase tracking-widest hover:bg-wedding-secondary transition-all duration-300">RSVP</a>
     </nav>
 
-    <!-- Hero Section -->
-    <section class="relative min-h-screen flex flex-col items-center justify-center px-6 pt-20 overflow-hidden">
-        <div class="absolute inset-0 z-0 opacity-10 flex items-center justify-center">
-            <img src="https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&w=1200&q=80" alt="Alliances" class="w-full h-full object-cover grayscale">
-        </div>
-        <div class="z-10 text-center flex flex-col items-center max-w-4xl">
-            <p class="text-wedding-contrast uppercase tracking-[0.4em] text-[9px] mb-8 animate-pulse">28 Août 2026</p>
+    <!-- Hero Section avec Carousel d'Anneaux uniquement -->
+    <section class="relative min-h-screen flex flex-col items-center justify-center px-6 pt-20 overflow-hidden bg-[#2a1a15]">
+        <div id="hero-bg-container" class="absolute inset-0 z-0"></div>
+        
+        <!-- Couches de Filtres Terracotta -->
+        <div class="terracotta-overlay"></div>
+        <div class="terracotta-tint"></div>
+        
+        <div class="z-10 text-center flex flex-col items-center max-w-4xl p-8 rounded-lg">
+            <p class="text-white uppercase tracking-[0.5em] text-[10px] mb-8 animate-pulse font-bold">28 Août 2026</p>
             <div class="flex flex-col items-center gap-4 mb-12">
-                <h1 class="text-5xl md:text-8xl font-serif leading-tight">Sam Bangwela</h1>
-                <span class="text-3xl md:text-5xl font-serif italic text-wedding-primary opacity-60">&</span>
-                <h1 class="text-5xl md:text-8xl font-serif leading-tight">Aurelie Tshilombo</h1>
+                <h1 class="text-5xl md:text-8xl font-serif leading-tight text-white drop-shadow-2xl">Sam Bangwela</h1>
+                <span class="text-3xl md:text-5xl font-serif italic text-white/80 opacity-80">&</span>
+                <h1 class="text-5xl md:text-8xl font-serif leading-tight text-white drop-shadow-2xl">Aurelie Tshilombo</h1>
             </div>
-            <div class="max-w-md border-y border-wedding-contrast/20 py-8 mb-12 relative">
-                <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-wedding-base px-4 text-wedding-primary">
-                    <i data-lucide="heart" class="w-4 h-4 fill-current"></i>
-                </div>
-                <p class="text-lg md:text-xl font-serif italic text-wedding-contrast leading-relaxed italic">« La corde à trois fils ne se rompt pas facilement. »</p>
-                <p class="text-[10px] uppercase tracking-widest mt-4 text-wedding-text/50">— Ecclésiaste 4:12</p>
+            <div class="max-w-md border-y border-white/30 py-8 mb-12 relative">
+                <div class="absolute -top-3 left-1/2 -translate-x-1/2 px-4 text-white"><i data-lucide="heart" class="w-4 h-4 fill-current"></i></div>
+                <p class="text-lg md:text-xl font-serif italic text-white/90 leading-relaxed italic">« La corde à trois fils ne se rompt pas facilement. »</p>
+                <p class="text-[10px] uppercase tracking-widest mt-4 text-white/60">— Ecclésiaste 4:12</p>
             </div>
 
-            <!-- Recherche d'invité -->
+            <!-- Recherche -->
             <div class="w-full max-w-sm mt-4 min-h-[140px]">
-                <div id="loading-spinner" class="flex flex-col items-center gap-3 hidden">
-                    <i data-lucide="loader-2" class="w-6 h-6 animate-spin text-wedding-primary"></i>
-                </div>
-                
+                <div id="loading-spinner" class="flex flex-col items-center gap-3 hidden"><i data-lucide="loader-2" class="w-6 h-6 animate-spin text-white"></i></div>
                 <div id="search-container">
-                    <p class="text-[9px] uppercase tracking-widest mb-4 text-wedding-contrast font-bold text-center">Consultez votre placement</p>
                     <form onsubmit="handleSearch(event)" class="relative group">
-                        <input id="search-input" type="text" placeholder="Entrez votre nom complet..." class="w-full bg-transparent border-b border-wedding-primary/20 py-4 px-4 focus:outline-none focus:border-wedding-primary transition-all font-serif italic text-lg text-center">
-                        <button type="submit" class="absolute right-2 top-1/2 -translate-y-1/2 text-wedding-primary">
-                            <i data-lucide="search" class="w-5 h-5"></i>
-                        </button>
+                        <input id="search-input" type="text" placeholder="Rechercher votre nom..." class="w-full bg-white/10 backdrop-blur-md border-b border-white/20 py-4 px-4 focus:outline-none focus:border-white transition-all font-serif italic text-lg text-center text-white">
+                        <button type="submit" class="absolute right-2 top-1/2 -translate-y-1/2 text-white/80"><i data-lucide="search" class="w-5 h-5"></i></button>
                     </form>
                 </div>
-
-                <div id="result-container" class="hidden animate-in zoom-in duration-500 text-wedding-primary flex flex-col items-center bg-white/60 bg-blur p-8 rounded-sm border border-wedding-primary/10 shadow-xl">
+                <div id="result-container" class="hidden animate-in zoom-in duration-500 text-wedding-primary flex flex-col items-center bg-white/95 p-8 rounded-sm shadow-2xl">
                     <div class="flex items-center gap-3 mb-3">
                         <i data-lucide="check" class="w-5 h-5 bg-wedding-primary/10 rounded-full p-1"></i>
                         <span id="welcome-name" class="font-serif text-2xl italic text-wedding-text"></span>
                     </div>
-                    <p class="text-[10px] uppercase tracking-[0.3em] font-bold">Votre Table : <span id="welcome-table" class="text-wedding-primary"></span></p>
+                    <p class="text-[10px] uppercase tracking-[0.3em] font-bold">Votre Table : <span id="welcome-table"></span></p>
                     <button onclick="resetSearch()" class="mt-6 text-[8px] uppercase tracking-widest text-wedding-contrast underline">Changer de nom</button>
                 </div>
             </div>
-            <i data-lucide="chevron-down" class="w-8 h-8 text-wedding-primary/40 mt-16 animate-bounce"></i>
+            <i data-lucide="chevron-down" class="w-8 h-8 text-white/40 mt-16 animate-bounce"></i>
         </div>
     </section>
 
@@ -167,7 +226,7 @@
                     <span class="text-wedding-secondary font-medium tracking-widest text-[10px] uppercase">08h00 — 10h00</span>
                     <h3 class="text-xl font-serif text-wedding-text">Cérémonie Civile</h3>
                     <p class="text-wedding-primary font-medium flex items-center gap-1 text-[11px]"><i data-lucide="map-pin" class="w-3 h-3"></i> Commune De Lubumbashi</p>
-                    <p class="text-wedding-text/70 text-xs italic mt-2">L'officialisation de notre union au cœur de la ville.</p>
+                    <p class="text-wedding-text/70 text-xs italic mt-2">L'officialisation de notre union.</p>
                 </div>
                 <div class="relative pl-8 group">
                     <div class="absolute left-0 top-1 w-px h-full bg-wedding-contrast/30"></div>
@@ -175,7 +234,6 @@
                     <span class="text-wedding-secondary font-medium tracking-widest text-[10px] uppercase">13h30 — 15h30</span>
                     <h3 class="text-xl font-serif text-wedding-text">Bénédiction Nuptiale</h3>
                     <p class="text-wedding-primary font-medium flex items-center gap-1 text-[11px]"><i data-lucide="map-pin" class="w-3 h-3"></i> Église Bethel</p>
-                    <p class="text-wedding-text/70 text-xs italic mt-2">Av. De la moto n° 2428B Q/Gambela. La consécration devant Dieu.</p>
                 </div>
                 <div class="relative pl-8 group">
                     <div class="absolute left-0 top-1 w-px h-0 bg-wedding-contrast/30"></div>
@@ -183,135 +241,128 @@
                     <span class="text-wedding-secondary font-medium tracking-widest text-[10px] uppercase">19h30 — 23h00</span>
                     <h3 class="text-xl font-serif text-wedding-text">Réception de Gala</h3>
                     <p class="text-wedding-primary font-medium flex items-center gap-1 text-[11px]"><i data-lucide="map-pin" class="w-3 h-3"></i> Salle Polyvalente Aurore</p>
-                    <p class="text-wedding-text/70 text-xs italic mt-2">Dîner et célébration. Un moment de partage inoubliable avec vous.</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Dress Code Carrousel -->
+    <!-- Dress Code -->
     <section class="py-24 px-6 bg-white overflow-hidden">
-        <div class="max-w-6xl mx-auto">
-            <div class="grid md:grid-cols-2 gap-16 items-center">
-                <div id="carousel-trigger" class="relative group cursor-pointer" onclick="toggleCarouselPause()">
-                    <div class="aspect-[4/5] relative rounded-sm shadow-2xl overflow-hidden bg-wedding-base">
-                        <div id="carousel-images" class="absolute inset-0">
-                            <!-- Les images seront injectées ici par JS -->
-                        </div>
-                        <!-- Progress Bars -->
-                        <div id="carousel-progress" class="absolute top-4 left-4 right-4 flex gap-1 z-10"></div>
-                        <!-- Overlay -->
-                        <div id="carousel-overlay" class="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            <div class="bg-white/90 p-4 rounded-full text-wedding-primary">
-                                <i id="carousel-icon" data-lucide="pause" class="w-6 h-6 fill-current"></i>
-                            </div>
-                        </div>
+        <div class="max-w-6xl mx-auto grid md:grid-cols-2 gap-16 items-center">
+            <div id="carousel-trigger" class="relative group cursor-pointer" onclick="toggleCarouselPause()">
+                <div class="aspect-[4/5] relative rounded-sm shadow-2xl overflow-hidden bg-wedding-base">
+                    <div id="carousel-images" class="absolute inset-0"></div>
+                    <div id="carousel-progress" class="absolute top-4 left-4 right-4 flex gap-1 z-10"></div>
+                    <div id="carousel-overlay" class="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <div class="bg-white/90 p-4 rounded-full text-wedding-primary"><i id="carousel-icon" data-lucide="pause" class="w-6 h-6 fill-current"></i></div>
                     </div>
-                    <p class="text-[10px] text-center mt-4 text-wedding-contrast uppercase tracking-widest italic font-medium">Touchez l'image pour l'arrêter</p>
                 </div>
-
-                <div>
-                    <span class="text-wedding-primary uppercase tracking-[0.4em] text-[10px] font-bold block mb-4">L'Esthétique</span>
-                    <h2 class="text-5xl md:text-6xl font-serif mb-8">Le Dress Code</h2>
-                    <p class="text-wedding-text/70 font-serif italic text-xl mb-12 leading-relaxed">
-                        Pour créer une harmonie visuelle, nous vous invitons à porter des nuances de <span class="text-wedding-primary font-bold">Terracotta</span>.
-                    </p>
-                    <div class="flex flex-wrap gap-4 mb-10">
-                        <div class="flex flex-col items-center gap-2">
-                            <div class="w-16 h-16 rounded-full bg-wedding-primary shadow-lg border-2 border-white ring-2 ring-wedding-primary/10"></div>
-                            <span class="text-[9px] uppercase tracking-widest text-wedding-contrast">Terracotta</span>
-                        </div>
-                        <div class="flex flex-col items-center gap-2">
-                            <div class="w-16 h-16 rounded-full bg-wedding-secondary shadow-lg border-2 border-white ring-2 ring-wedding-secondary/10"></div>
-                            <span class="text-[9px] uppercase tracking-widest text-wedding-contrast">Rouille</span>
-                        </div>
-                        <div class="flex flex-col items-center gap-2">
-                            <div class="w-16 h-16 rounded-full bg-wedding-contrast shadow-lg border-2 border-white ring-2 ring-wedding-contrast/10"></div>
-                            <span class="text-[9px] uppercase tracking-widest text-wedding-contrast">Taupe</span>
-                        </div>
-                    </div>
+                <p class="text-[10px] text-center mt-4 text-wedding-contrast uppercase tracking-widest italic font-medium">Touchez pour mettre en pause</p>
+            </div>
+            <div>
+                <span class="text-wedding-primary uppercase tracking-[0.4em] text-[10px] font-bold block mb-4">L'Esthétique</span>
+                <h2 class="text-5xl md:text-6xl font-serif mb-8">Le Dress Code</h2>
+                <p class="text-wedding-text/70 font-serif italic text-xl mb-12 leading-relaxed">Nuances de <span class="text-wedding-primary font-bold">Terracotta</span>.</p>
+                <div class="flex flex-wrap gap-4">
+                    <div class="w-16 h-16 rounded-full bg-wedding-primary shadow-lg border-2 border-white"></div>
+                    <div class="w-16 h-16 rounded-full bg-wedding-secondary shadow-lg border-2 border-white"></div>
+                    <div class="w-16 h-16 rounded-full bg-wedding-contrast shadow-lg border-2 border-white"></div>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- RSVP -->
-    <section id="rsvp" class="py-32 px-6 bg-wedding-primary text-wedding-base relative overflow-hidden">
-        <div class="max-w-4xl mx-auto relative z-10 text-center">
-            <h2 class="text-5xl md:text-7xl font-serif mb-20">Votre Présence</h2>
-            <div class="grid md:grid-cols-2 gap-16 text-left">
-                <div class="bg-white/5 bg-blur p-10 rounded-sm border border-white/10 flex flex-col justify-between">
-                    <div>
-                        <h3 class="text-2xl font-serif mb-8 flex items-center gap-3"><i data-lucide="info" class="w-5 h-5"></i> Détails</h3>
-                        <div id="rsvp-details-empty" class="text-xs italic opacity-60">Recherchez votre nom pour voir vos infos.</div>
-                        <div id="rsvp-details-full" class="hidden space-y-6">
-                            <div>
-                                <p class="text-[9px] uppercase tracking-[0.2em] text-white/40 mb-2 font-bold">Invité d'honneur</p>
-                                <p id="rsvp-name" class="text-2xl font-serif italic text-white/90 underline decoration-wedding-secondary underline-offset-8"></p>
-                            </div>
-                            <div>
-                                <p class="text-[9px] uppercase tracking-[0.2em] text-white/40 mb-2 font-bold">Placement</p>
-                                <p id="rsvp-table" class="text-2xl font-serif italic text-white/90"></p>
-                            </div>
+    <section id="rsvp" class="py-32 px-6 bg-wedding-primary text-wedding-base relative overflow-hidden text-center">
+        <h2 class="text-5xl md:text-7xl font-serif mb-20">Votre Présence</h2>
+        <div class="max-w-4xl mx-auto grid md:grid-cols-2 gap-16 text-left">
+            <div class="bg-white/5 backdrop-blur-md p-10 rounded-sm border border-white/10 flex flex-col justify-between">
+                <div>
+                    <h3 class="text-2xl font-serif mb-8 flex items-center gap-3"><i data-lucide="info" class="w-5 h-5"></i> Détails</h3>
+                    <div id="rsvp-details-empty" class="text-xs italic opacity-60">Recherchez votre nom pour voir vos infos.</div>
+                    <div id="rsvp-details-full" class="hidden space-y-6">
+                        <div>
+                            <p class="text-[9px] uppercase tracking-[0.2em] text-white/40 mb-2 font-bold">Invité d'honneur</p>
+                            <p id="rsvp-name" class="text-2xl font-serif italic text-white/90 underline decoration-wedding-secondary underline-offset-8"></p>
+                        </div>
+                        <div>
+                            <p class="text-[9px] uppercase tracking-[0.2em] text-white/40 mb-2 font-bold">Placement</p>
+                            <p id="rsvp-table" class="text-2xl font-serif italic text-white/90"></p>
                         </div>
                     </div>
-                    <a id="whatsapp-btn" href="#" target="_blank" class="mt-12 w-full py-5 bg-white text-wedding-primary rounded-sm font-bold tracking-[0.2em] uppercase text-[10px] flex items-center justify-center gap-3 shadow-2xl">
-                        <i data-lucide="message-circle" class="w-5 h-5"></i> Confirmer via WhatsApp
-                    </a>
                 </div>
-                <div class="flex flex-col gap-12 py-6">
-                    <div class="flex gap-6"><i data-lucide="clock" class="w-6 h-6"></i><p class="text-white/50 text-[13px]">Réponse souhaitée avant le 01.08.2026.</p></div>
-                    <div class="flex gap-6"><i data-lucide="users" class="w-6 h-6"></i><p class="text-white/50 text-[13px]">Celle-ci est personnelle. Merci de nous informer de tout changement.</p></div>
-                </div>
+                <a id="whatsapp-btn" href="#" target="_blank" class="mt-12 w-full py-5 bg-white text-wedding-primary rounded-sm font-bold uppercase text-[10px] flex items-center justify-center gap-3 shadow-2xl">
+                    <i data-lucide="message-circle" class="w-5 h-5"></i> Confirmer via WhatsApp
+                </a>
+            </div>
+            <div class="flex flex-col gap-12 py-6">
+                <div class="flex gap-6"><i data-lucide="clock" class="w-6 h-6"></i><p class="text-white/50 text-[13px]">Réponse souhaitée avant le 01.08.2026.</p></div>
+                <div class="flex gap-6"><i data-lucide="users" class="w-6 h-6"></i><p class="text-white/50 text-[13px]">Celle-ci est personnelle.</p></div>
             </div>
         </div>
     </section>
 
+    <!-- Footer -->
     <footer class="py-20 bg-wedding-text text-wedding-base/20 text-center px-6">
-        <div class="max-w-xs mx-auto mb-12">
-            <div class="h-px bg-white/10 mb-12"></div>
-            <p class="font-serif text-3xl mb-3 tracking-tighter text-wedding-base">Sam & Aurelie</p>
-            <p class="text-[9px] uppercase tracking-[0.5em] opacity-30 font-bold mb-8">28 . 08 . 2026</p>
-            <p class="text-[8px] uppercase tracking-[0.3em] opacity-20">L'amour ne périt jamais — 1 Cor. 13:8</p>
-        </div>
-        
-        <!-- Pied de page - Développeur -->
+        <p class="font-serif text-3xl mb-3 tracking-tighter text-wedding-base">Sam & Aurelie</p>
+        <p class="text-[9px] uppercase tracking-[0.5em] opacity-30 font-bold mb-8">28 . 08 . 2026</p>
         <div class="mt-16 pt-10 border-t border-white/5 flex flex-col items-center gap-6">
-            <p class="text-[9px] uppercase tracking-[0.2em] opacity-40 font-medium tracking-widest">Powered by</p>
-            
-            <a href="https://wa.me/243995342102?text=Bonjour%20Adasoft,%20je%20souhaite%20en%20savoir%20plus%20sur%20vos%20services%20de%20design%20et%20strat%C3%A9gie." target="_blank" class="group flex flex-col items-center gap-4 transition-all">
-                <img src="Fichier 4.png" alt="Adasoft Logo" class="h-10 w-auto opacity-40 group-hover:opacity-100 transition-opacity filter brightness-0 invert">
+            <p class="text-[9px] uppercase opacity-40">Powered by</p>
+            <a href="https://wa.me/243995342102" target="_blank" class="group transition-all opacity-40 hover:opacity-100 flex flex-col items-center gap-4">
+                <img src="Fichier 4.png" alt="Adasoft Logo" class="h-10 w-auto filter brightness-0 invert">
             </a>
-            
-            <a href="https://wa.me/243995342102?text=Bonjour%20Adasoft,%20je%20souhaite%20en%20savoir%20plus%20sur%20vos%20services%20de%20design%20et%20strat%C3%A9gie." target="_blank" class="text-[9px] uppercase tracking-[0.3em] opacity-30 hover:opacity-100 underline underline-offset-4 transition-all">Contact Us</a>
+            <a href="https://wa.me/243995342102" target="_blank" class="text-[9px] uppercase opacity-30 hover:opacity-100 underline">Contact Us</a>
         </div>
     </footer>
 
     <script>
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzXAyw3bU3a7XROEoD68a3DLyjwNIrTcm17B6hiVDp3xucR3AFE5YHKzW4aA-P7zULp/exec";
+        
         const DRESS_CODE_IMAGES = [
             "./image 01.webp",
             "./image 02.webp",
             "./image 03.webp",
             "./image 04.webp",
-            "./image 05.webp"
+            "./image 05.webp",
+        ];
+
+        // Uniquement des anneaux de mariage pour la section Hero
+        const HERO_IMAGES = [
+            "https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&w=1200&q=80",
+            "./Img 01.webp",
+            "./Img 02.webp",
+            "./Img 03.webp",
+            "./Img 04.webp",
+            
         ];
 
         let allInvites = [];
         let inviteeData = null;
         let isPlaying = false;
         let currentPhotoIndex = 0;
+        let currentHeroIndex = 0;
         let isCarouselPaused = false;
-        let carouselInterval;
+        let carouselInterval, heroInterval;
 
         const audio = document.getElementById('wedding-audio');
-
-        // Initialisation des icônes
         lucide.createIcons();
 
-        // Fetch des invités
+        function openInvitation() {
+            const container = document.querySelector('.envelope-container');
+            const welcomeScreen = document.getElementById('welcome-screen');
+            container.classList.add('open');
+            setTimeout(() => {
+                welcomeScreen.style.opacity = '0';
+                setTimeout(() => {
+                    welcomeScreen.classList.add('hidden');
+                    startExperience();
+                }, 1000);
+            }, 1800);
+        }
+
         async function fetchInvites() {
-            document.getElementById('loading-spinner').classList.remove('hidden');
+            const spinner = document.getElementById('loading-spinner');
+            if (spinner) spinner.classList.remove('hidden');
             try {
                 const response = await fetch(GOOGLE_SCRIPT_URL, { redirect: 'follow' });
                 const data = await response.json();
@@ -319,45 +370,45 @@
                     name: (item.Nom || item.nom || item.Name || item.name || "").toString().trim(),
                     table: (item.Table || item.table || "Non assignée").toString().trim()
                 }));
+                checkUrlParams();
             } catch (err) {
                 console.error("Erreur fetch:", err);
             } finally {
-                document.getElementById('loading-spinner').classList.add('hidden');
+                if (spinner) spinner.classList.add('hidden');
             }
         }
 
-        // Recherche
+        function checkUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const nomParam = urlParams.get('nom');
+            if (nomParam && allInvites.length > 0) {
+                const searchVal = nomParam.toLowerCase().trim();
+                const found = allInvites.find(inv => inv.name.toLowerCase() === searchVal || inv.name.toLowerCase().includes(searchVal));
+                if (found) { inviteeData = found; showInviteeDetails(); }
+            }
+        }
+
         function handleSearch(e) {
             e.preventDefault();
             const searchVal = document.getElementById('search-input').value.toLowerCase().trim();
             if (!searchVal) return;
-
-            inviteeData = allInvites.find(inv => 
-                inv.name.toLowerCase() === searchVal || 
-                inv.name.toLowerCase().includes(searchVal)
-            );
-
-            if (inviteeData) {
-                showInviteeDetails();
-            }
+            inviteeData = allInvites.find(inv => inv.name.toLowerCase() === searchVal || inv.name.toLowerCase().includes(searchVal));
+            if (inviteeData) showInviteeDetails();
         }
 
         function showInviteeDetails() {
             document.getElementById('search-container').classList.add('hidden');
             document.getElementById('result-container').classList.remove('hidden');
-            
             document.getElementById('welcome-name').innerText = inviteeData.name;
             document.getElementById('welcome-table').innerText = inviteeData.table;
-            
-            document.getElementById('nav-table').innerText = `Place : ${inviteeData.table}`;
-            document.getElementById('nav-table').classList.remove('hidden');
-            setTimeout(() => document.getElementById('nav-table').classList.remove('opacity-0'), 10);
-            
+            const navTable = document.getElementById('nav-table');
+            navTable.innerText = `Place : ${inviteeData.table}`;
+            navTable.classList.remove('hidden');
+            setTimeout(() => navTable.classList.remove('opacity-0'), 10);
             document.getElementById('rsvp-details-empty').classList.add('hidden');
             document.getElementById('rsvp-details-full').classList.remove('hidden');
             document.getElementById('rsvp-name').innerText = inviteeData.name;
             document.getElementById('rsvp-table').innerText = `Table ${inviteeData.table}`;
-            
             updateWhatsappLink();
         }
 
@@ -369,6 +420,7 @@
             document.getElementById('rsvp-details-empty').classList.remove('hidden');
             document.getElementById('rsvp-details-full').classList.add('hidden');
             document.getElementById('search-input').value = "";
+            window.history.replaceState({}, document.title, window.location.pathname);
             updateWhatsappLink();
         }
 
@@ -379,28 +431,20 @@
             document.getElementById('whatsapp-btn').href = `https://wa.me/243990000713?text=${text}`;
         }
 
-        // Musique et Expérience
         function startExperience() {
-            document.getElementById('welcome-screen').classList.add('hidden');
             isPlaying = true;
-            audio.play();
+            audio.play().catch(() => { isPlaying = false; updateMusicIcon(); });
             updateMusicIcon();
             startCarousel();
+            startHeroCarousel();
             document.getElementById('program-img-container').classList.add('animate-rhythm');
         }
 
         function toggleMusic() {
-            if (isPlaying) {
-                audio.pause();
-                document.getElementById('program-img-container').classList.remove('animate-rhythm');
-            } else {
-                audio.play();
-                document.getElementById('program-img-container').classList.add('animate-rhythm');
-            }
+            if (isPlaying) audio.pause(); else audio.play();
             isPlaying = !isPlaying;
             updateMusicIcon();
-            if (isPlaying && !isCarouselPaused) startCarousel();
-            else clearInterval(carouselInterval);
+            if (isPlaying && !isCarouselPaused) startCarousel(); else clearInterval(carouselInterval);
         }
 
         function updateMusicIcon() {
@@ -411,17 +455,37 @@
             lucide.createIcons();
         }
 
-        // Carrousel
+        function initHeroCarousel() {
+            const container = document.getElementById('hero-bg-container');
+            HERO_IMAGES.forEach((src, i) => {
+                const img = document.createElement('img');
+                img.src = src;
+                img.className = `hero-bg-item absolute inset-0 w-full h-full object-cover ${i === 0 ? 'opacity-100' : 'opacity-0'}`;
+                container.appendChild(img);
+            });
+        }
+
+        function startHeroCarousel() {
+            heroInterval = setInterval(() => {
+                if (isPlaying) {
+                    const items = document.querySelectorAll('.hero-bg-item');
+                    if (items.length > 0) {
+                        items[currentHeroIndex].classList.replace('opacity-100', 'opacity-0');
+                        currentHeroIndex = (currentHeroIndex + 1) % HERO_IMAGES.length;
+                        items[currentHeroIndex].classList.replace('opacity-0', 'opacity-100');
+                    }
+                }
+            }, 6000);
+        }
+
         function initCarousel() {
             const container = document.getElementById('carousel-images');
             const progress = document.getElementById('carousel-progress');
-            
             DRESS_CODE_IMAGES.forEach((src, i) => {
                 const imgDiv = document.createElement('div');
-                imgDiv.className = `carousel-item absolute inset-0 transform ${i === 0 ? 'opacity-100 scale-100' : 'opacity-0 scale-110 rotate-3'}`;
+                imgDiv.className = `carousel-item absolute inset-0 transform ${i === 0 ? 'opacity-100 scale-100' : 'opacity-0 scale-110 rotate-1'}`;
                 imgDiv.innerHTML = `<img src="${src}" class="w-full h-full object-cover">`;
                 container.appendChild(imgDiv);
-
                 const bar = document.createElement('div');
                 bar.className = "h-0.5 flex-1 bg-white/30 rounded-full overflow-hidden";
                 bar.innerHTML = `<div id="bar-inner-${i}" class="h-full bg-white w-0 transition-all duration-[3000ms] linear"></div>`;
@@ -431,30 +495,20 @@
 
         function startCarousel() {
             clearInterval(carouselInterval);
-            carouselInterval = setInterval(() => {
-                if (!isCarouselPaused && isPlaying) {
-                    nextPhoto();
-                }
-            }, 3000);
+            carouselInterval = setInterval(() => { if (!isCarouselPaused && isPlaying) nextPhoto(); }, 3000);
         }
 
         function nextPhoto() {
             const items = document.querySelectorAll('.carousel-item');
             const bars = document.querySelectorAll('[id^="bar-inner-"]');
-            
+            if (items.length === 0) return;
             items[currentPhotoIndex].classList.replace('opacity-100', 'opacity-0');
             items[currentPhotoIndex].classList.replace('scale-100', 'scale-110');
-            items[currentPhotoIndex].classList.add('rotate-3');
-            
-            bars[currentPhotoIndex].style.width = '0%';
-
+            if (bars[currentPhotoIndex]) bars[currentPhotoIndex].style.width = '0%';
             currentPhotoIndex = (currentPhotoIndex + 1) % DRESS_CODE_IMAGES.length;
-
             items[currentPhotoIndex].classList.replace('opacity-0', 'opacity-100');
             items[currentPhotoIndex].classList.replace('scale-110', 'scale-100');
-            items[currentPhotoIndex].classList.remove('rotate-3');
-            
-            bars[currentPhotoIndex].style.width = '100%';
+            if (bars[currentPhotoIndex]) bars[currentPhotoIndex].style.width = '100%';
         }
 
         function toggleCarouselPause() {
@@ -462,30 +516,22 @@
             const icon = document.getElementById('carousel-icon');
             icon.setAttribute('data-lucide', isCarouselPaused ? 'play' : 'pause');
             lucide.createIcons();
-            
-            if (isCarouselPaused) {
-                clearInterval(carouselInterval);
-                document.querySelectorAll('[id^="bar-inner-"]').forEach(b => b.style.transition = 'none');
-            } else {
-                document.querySelectorAll('[id^="bar-inner-"]').forEach(b => b.style.transition = 'width 3s linear');
-                startCarousel();
-            }
+            if (isCarouselPaused) clearInterval(carouselInterval); else startCarousel();
         }
 
-        // Navbar Scroll
         window.addEventListener('scroll', () => {
             const nav = document.getElementById('navbar');
             if (window.scrollY > 50) {
-                nav.classList.add('bg-white/95', 'bg-blur', 'shadow-sm', 'border-b', 'border-wedding-primary/5');
+                nav.classList.add('bg-white/95', 'backdrop-blur-md', 'shadow-sm');
                 nav.classList.remove('bg-transparent');
             } else {
-                nav.classList.remove('bg-white/95', 'bg-blur', 'shadow-sm', 'border-b', 'border-wedding-primary/5');
+                nav.classList.remove('bg-white/95', 'backdrop-blur-md', 'shadow-sm');
                 nav.classList.add('bg-transparent');
             }
         });
 
-        // Init
         initCarousel();
+        initHeroCarousel();
         fetchInvites();
         updateWhatsappLink();
     </script>
