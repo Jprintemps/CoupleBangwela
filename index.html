@@ -88,7 +88,10 @@
             pointer-events: none;
         }
 
-        .hero-bg-item { transition: opacity 2s ease-in-out; filter: sepia(0.3) contrast(1.1) brightness(0.8); }
+        /* Hero Carousel & Images */
+        .hero-bg-item { transition: opacity 2s ease-in-out; }
+        .hero-bg-item img { width: 100%; height: 100%; object-fit: cover; filter: sepia(0.3) contrast(1.1) brightness(0.8); }
+        
         .carousel-item { transition: opacity 1s ease-in-out, transform 1s ease-in-out; }
     </style>
 </head>
@@ -164,7 +167,7 @@
         <a href="#rsvp" class="bg-wedding-primary text-white px-5 py-2 rounded-full text-[9px] uppercase tracking-widest hover:bg-wedding-secondary transition-all duration-300">RSVP</a>
     </nav>
 
-    <!-- Hero Section avec Carousel d'Anneaux uniquement -->
+    <!-- Hero Section avec Carousel d'Anneaux (Version Desktop / Mobile) -->
     <section class="relative min-h-screen flex flex-col items-center justify-center px-6 pt-20 overflow-hidden bg-[#2a1a15]">
         <div id="hero-bg-container" class="absolute inset-0 z-0"></div>
         
@@ -295,9 +298,16 @@
                         </div>
                     </div>
                 </div>
-                <a id="whatsapp-btn" href="#" target="_blank" class="mt-12 w-full py-5 bg-white text-wedding-primary rounded-sm font-bold uppercase text-[10px] flex items-center justify-center gap-3 shadow-2xl">
-                    <i data-lucide="message-circle" class="w-5 h-5"></i> Confirmer via WhatsApp
-                </a>
+                
+                <!-- Double Boutons WhatsApp -->
+                <div class="mt-12 flex flex-col gap-4">
+                    <a id="whatsapp-btn-sam" href="#" target="_blank" class="w-full py-4 bg-white text-wedding-primary rounded-sm font-bold uppercase text-[10px] flex items-center justify-center gap-3 shadow-xl hover:bg-wedding-base transition-colors">
+                        <i data-lucide="message-circle" class="w-5 h-5"></i> Aux invités de Sam
+                    </a>
+                    <a id="whatsapp-btn-aurelie" href="#" target="_blank" class="w-full py-4 bg-white text-wedding-primary rounded-sm font-bold uppercase text-[10px] flex items-center justify-center gap-3 shadow-xl hover:bg-wedding-base transition-colors">
+                        <i data-lucide="message-circle" class="w-5 h-5"></i> Aux invités d'Aurelie
+                    </a>
+                </div>
             </div>
             <div class="flex flex-col gap-12 py-6">
                 <div class="flex gap-6"><i data-lucide="clock" class="w-6 h-6"></i><p class="text-white/50 text-[13px]">Réponse souhaitée avant le 01.08.2026.</p></div>
@@ -330,14 +340,25 @@
             "./image 05.webp",
         ];
 
-        // Uniquement des anneaux de mariage pour la section Hero
-        const HERO_IMAGES = [
+        // Images version Desktop
+        const HERO_IMAGES_DESKTOP = [
             "https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&w=1200&q=80",
             "./Img 01.webp",
             "./Img 02.webp",
             "./Img 03.webp",
             "./Img 04.webp",
-            
+        ];
+
+        // Images version Mobile (Tu peux ajuster les noms ici)
+        const HERO_IMAGES_MOBILE = [
+            "./mobi image 01.webp",
+            "./mobi image 02.webp",
+            "./mobi image 03.webp",
+            "./mobi image 04.webp",
+            "./mobi image 05.webp",
+            "./mobi image 06.webp",
+            "./mobi image 07.webp",
+            "./mobi image 08.webp",
         ];
 
         let allInvites = [];
@@ -432,7 +453,11 @@
             const name = inviteeData ? encodeURIComponent(inviteeData.name) : "...";
             const table = inviteeData ? encodeURIComponent(inviteeData.table) : "...";
             const text = `Bonjour, je suis ${name}. Je confirme ma présence au mariage. Ma table : ${table}`;
-            document.getElementById('whatsapp-btn').href = `https://wa.me/243990000713?text=${text}`;
+            
+            // Bouton Sam
+            document.getElementById('whatsapp-btn-sam').href = `https://wa.me/243990000713?text=${text}`;
+            // Bouton Aurelie
+            document.getElementById('whatsapp-btn-aurelie').href = `https://wa.me/243977222327?text=${text}`;
         }
 
         function startExperience() {
@@ -461,11 +486,18 @@
 
         function initHeroCarousel() {
             const container = document.getElementById('hero-bg-container');
-            HERO_IMAGES.forEach((src, i) => {
-                const img = document.createElement('img');
-                img.src = src;
-                img.className = `hero-bg-item absolute inset-0 w-full h-full object-cover ${i === 0 ? 'opacity-100' : 'opacity-0'}`;
-                container.appendChild(img);
+            HERO_IMAGES_DESKTOP.forEach((desktopSrc, i) => {
+                const mobileSrc = HERO_IMAGES_MOBILE[i] || desktopSrc;
+                
+                // Utilisation de la balise <picture> pour switcher entre mobile et desktop automatiquement selon l'écran
+                const picture = document.createElement('picture');
+                picture.className = `hero-bg-item absolute inset-0 w-full h-full ${i === 0 ? 'opacity-100' : 'opacity-0'}`;
+                
+                picture.innerHTML = `
+                    <source media="(max-width: 768px)" srcset="${mobileSrc}">
+                    <img src="${desktopSrc}" alt="Wedding Banner">
+                `;
+                container.appendChild(picture);
             });
         }
 
@@ -475,7 +507,7 @@
                     const items = document.querySelectorAll('.hero-bg-item');
                     if (items.length > 0) {
                         items[currentHeroIndex].classList.replace('opacity-100', 'opacity-0');
-                        currentHeroIndex = (currentHeroIndex + 1) % HERO_IMAGES.length;
+                        currentHeroIndex = (currentHeroIndex + 1) % HERO_IMAGES_DESKTOP.length;
                         items[currentHeroIndex].classList.replace('opacity-0', 'opacity-100');
                     }
                 }
